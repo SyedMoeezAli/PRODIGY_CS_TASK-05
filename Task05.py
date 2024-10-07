@@ -1,30 +1,36 @@
 from scapy.all import sniff
 from scapy.layers.inet import IP, TCP, UDP, ICMP
 
-
-def packet_handler(packet):
+def analyze_packet(packet):
+    # Check if the packet has an IP layer
     if IP in packet:
         ip_layer = packet[IP]
-        print(f"\n[+] Packet: {ip_layer.src} -> {ip_layer.dst}")
-        
-        
-        if packet.haslayer(TCP):
-            print(f"    Protocol: TCP | Source Port: {packet[TCP].sport} -> Destination Port: {packet[TCP].dport}")
-        elif packet.haslayer(UDP):
-            print(f"    Protocol: UDP | Source Port: {packet[UDP].sport} -> Destination Port: {packet[UDP].dport}")
-        elif packet.haslayer(ICMP):
-            print("    Protocol: ICMP")
+        src_ip = ip_layer.src
+        dst_ip = ip_layer.dst
+        protocol = ip_layer.proto
 
-        
-        if packet[IP].payload:
-            print(f"    Payload: {bytes(packet[IP].payload).hex()}")  # Print payload as hex for readability
+        # Display basic IP packet information
+        print(f"\nSource IP: {src_ip} -> Destination IP: {dst_ip}")
 
+        # Determine the transport layer protocol
+        if protocol == 6 and TCP in packet:
+            tcp_layer = packet[TCP]
+            print(f"Protocol: TCP | Source Port: {tcp_layer.sport} -> Destination Port: {tcp_layer.dport}")
+            print(f"Payload (Raw Data): {bytes(tcp_layer.payload)}")
+        elif protocol == 17 and UDP in packet:
+            udp_layer = packet[UDP]
+            print(f"Protocol: UDP | Source Port: {udp_layer.sport} -> Destination Port: {udp_layer.dport}")
+            print(f"Payload (Raw Data): {bytes(udp_layer.payload)}")
+        elif protocol == 1 and ICMP in packet:
+            print(f"Protocol: ICMP")
+            print(f"Payload (Raw Data): {bytes(packet[ICMP].payload)}")
+        else:
+            print(f"Protocol: Unknown")
 
-def start_sniffer(interface):
-    print(f"[*] Starting packet sniffer on interface: {interface}")
-    sniff(iface=interface, prn=packet_handler, store=False)
+def start_sniffer():
+    print("Starting packet sniffer... Press Ctrl+C to stop.")
+    # Start sniffing packets on the network
+    sniff(prn=analyze_packet, filter="ip", store=0)
 
 if __name__ == "__main__":
-   
-    interface = input("Enter the network interface to sniff on (e.g., eth0, wlan0): ")
-    start_sniffer(interface)
+    start_sniffer()
